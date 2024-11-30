@@ -9,5 +9,6 @@ import com.mreblan.cvservice.models.CvModel;
 
 public interface CvRepository extends ElasticsearchRepository<CvModel, String> {
     @Query("{\"match\": {\"cvText\": {\"query\": \"%?0%\", \"operator\": \"or\"}}}")
+    // @Query("{\"match\": {\"fullText\": \"%?0%\"}}")
     List<CvModel> searchByKeyword(String keyword);
 }

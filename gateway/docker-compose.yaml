@@ -1,0 +1,16 @@
+services:
+  gateway:
+    image: nginx:alpine
+    container_name: api-gateway
+    ports:
+      - "80:80"
+    expose:
+      - "80"
+    volumes:
+      - ./api_gateway.conf:/etc/nginx/nginx.conf:ro
+    networks:
+        - backend-network
+
+networks:
+  backend-network:
+    external: true

@@ -3,6 +3,7 @@ package com.mreblan.cvservice.services.impl;
 import java.util.List;
 import java.util.stream.StreamSupport;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.mreblan.cvservice.models.CvModel;
@@ -11,11 +12,16 @@ import com.mreblan.cvservice.services.CvService;
 
 import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
+// @RequiredArgsConstructor
 @Service
 public class CvServiceImpl implements CvService {
 
     private final CvRepository cvRepository;
+
+    @Autowired
+    public CvServiceImpl(CvRepository cvRepository) {
+        this.cvRepository = cvRepository;
+    }
     
     @Override
     public void saveCv(String cvText) {
