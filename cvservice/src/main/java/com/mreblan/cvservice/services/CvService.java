@@ -7,5 +7,5 @@ import com.mreblan.cvservice.models.CvModel;
 public interface CvService {
     void saveCv(String cvText);
     void getAllCv();
-    List<CvModel> getCvByKeyword(String keyword);
+    List<CvModel> getCvByKeyword(List<String> keyword);
 }

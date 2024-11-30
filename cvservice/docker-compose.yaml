@@ -1,0 +1,29 @@
+services:
+  cv_service:
+    build:
+      context: .
+    container_name: cv-app
+    depends_on:
+      - cv-elsearch
+    ports:
+      - "8081:8080"
+    networks:
+        - backend-network
+
+  cv-elsearch:
+    image: elasticsearch:8.16.1
+    container_name: cv-elsearch
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - http.host=0.0.0.0
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+        - backend-network
+
+networks:
+  backend-network:
+    external: true

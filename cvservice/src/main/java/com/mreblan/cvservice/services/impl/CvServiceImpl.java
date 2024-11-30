@@ -33,8 +33,9 @@ public class CvServiceImpl implements CvService {
     }
 
     @Override
-    public List<CvModel> getCvByKeyword(String keyword) {
-        List<CvModel> result = cvRepository.searchByKeyword(keyword);
+    public List<CvModel> getCvByKeyword(List<String> keywordsList) {
+        String keywords = String.join(" ", keywordsList);
+        List<CvModel> result = cvRepository.searchByKeyword(keywords);
 
         result.forEach(cv -> System.out.println(cv.toString()));
 
