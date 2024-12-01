@@ -104,6 +104,13 @@ public class CvController {
     public ResponseEntity<Response> uploadCv(@RequestParam("file") MultipartFile file) {
         String text = null;
 
+        if (
+            file.isEmpty() || 
+            !file.getOriginalFilename().endsWith(".pdf")
+        ) {
+            return createResponse(HttpStatus.BAD_REQUEST, new Response(false, "Файл не загружен или не является файлом формата pdf"));
+        }
+
         try {
             text = pdfService.extractText(file);
             log.info("TEXT FROM FILE: {}", text);
