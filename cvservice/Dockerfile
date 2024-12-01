@@ -8,6 +8,7 @@ RUN mvn package -DskipTests
 
 FROM openjdk:21 AS final
 COPY --from=stage1 /cv_service/target/*.jar app.jar
+COPY --from=stage1 /cv_service/fonts/roman_font/*.ttf /fonts/
 RUN curl -o /wait-for-it.sh https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh && \
     chmod +x /wait-for-it.sh
 EXPOSE 8081

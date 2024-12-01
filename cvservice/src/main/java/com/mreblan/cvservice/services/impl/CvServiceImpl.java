@@ -7,8 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.mreblan.cvservice.models.CvModel;
+
 import com.mreblan.cvservice.repositories.CvRepository;
+
 import com.mreblan.cvservice.services.CvService;
+
+import com.mreblan.cvservice.exceptions.CvsNotFoundException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -43,7 +47,11 @@ public class CvServiceImpl implements CvService {
         String keywords = String.join(" ", keywordsList);
         List<CvModel> result = cvRepository.searchByKeyword(keywords);
 
-        result.forEach(cv -> System.out.println(cv.toString()));
+        // result.forEach(cv -> System.out.println(cv.toString()));
+
+        if (result == null) {
+            throw new CvsNotFoundException("Cvs with such keywords not found");
+        }
 
         return result;
     }

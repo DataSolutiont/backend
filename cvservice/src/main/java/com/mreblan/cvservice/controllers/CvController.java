@@ -1,12 +1,22 @@
 package com.mreblan.cvservice.controllers;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.nio.file.Files;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.pdmodel.font.encoding.Encoding;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,8 +27,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.mreblan.cvservice.models.CvModel;
 import com.mreblan.cvservice.models.FindByKeywordsRequest;
+import com.mreblan.cvservice.models.CvResponse;
+
 import com.mreblan.cvservice.services.CvService;
 import com.mreblan.cvservice.services.FileService;
+import com.mreblan.cvservice.services.ZipService;
+import com.mreblan.cvservice.services.impl.TxtService;
+
+import com.mreblan.cvservice.exceptions.CvsNotFoundException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +45,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/cvs")
 public class CvController {
     
+    private final ZipService zipService;
     private final FileService pdfService;
+    private final TxtService txtService;
     private final CvService cvService;
 
     // @PostMapping("/upload")
@@ -103,8 +121,31 @@ public class CvController {
     }
     
     @GetMapping("/search")
-    public List<CvModel> searchCvs(@RequestBody FindByKeywordsRequest request) {
-        return cvService.getCvByKeyword(request.getKeywords());
+    public ResponseEntity<byte[]> searchByKeywords(@RequestBody FindByKeywordsRequest request) {
+        List<CvModel> cvs = cvService.getCvByKeyword(request.getKeywords());
+        ByteArrayOutputStream bOutputStream = null;
+        ZipOutputStream zOutputStream = null;
+
+        try {
+            bOutputStream = new ByteArrayOutputStream();
+            zOutputStream = zipService.generateZipOutputStream(bOutputStream);
+        
+            int counter = 1;
+            for (CvModel cv : cvs) {
+                byte[] file = txtService.generateFile(cv); 
+
+                zipService.appendZip(zOutputStream, file, "resume%d".formatted(counter));
+                counter++;
+            }
+
+            zOutputStream.close();
+        } catch (IOException e) {
+            log.error(e.getMessage());
+
+            return createCvResponse(HttpStatus.INTERNAL_SERVER_ERROR, null);
+        } 
+
+        return createCvResponse(HttpStatus.OK, bOutputStream.toByteArray());
     }
 
     @Deprecated
@@ -115,5 +156,14 @@ public class CvController {
         return ResponseEntity.ok("All CVs getted");
     }
 
+    private ResponseEntity<byte[]> createCvResponse(HttpStatus status, byte[] data) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=resumes.zip");
+        headers.add(HttpHeaders.CONTENT_TYPE, "application/zip");
 
+        return ResponseEntity
+                    .status(status)
+                    .headers(headers)
+                    .body(data);
+    } 
 } 
