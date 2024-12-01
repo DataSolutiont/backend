@@ -13,6 +13,7 @@ import com.mreblan.cvservice.repositories.CvRepository;
 import com.mreblan.cvservice.services.CvService;
 
 import com.mreblan.cvservice.exceptions.CvsNotFoundException;
+import com.mreblan.cvservice.exceptions.CvAlreadyExistsException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -29,6 +30,12 @@ public class CvServiceImpl implements CvService {
     
     @Override
     public void saveCv(String cvText) {
+        CvModel existingCv = cvRepository.findByCvText(cvText);
+
+        if (existingCv != null) {
+            throw new CvAlreadyExistsException("This CV already in DB");
+        }
+
         CvModel cv = new CvModel(cvText);
 
         cvRepository.save(cv);

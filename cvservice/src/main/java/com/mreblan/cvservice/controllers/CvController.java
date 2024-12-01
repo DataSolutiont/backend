@@ -28,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.mreblan.cvservice.models.CvModel;
 import com.mreblan.cvservice.models.FindByKeywordsRequest;
 import com.mreblan.cvservice.models.CvResponse;
+import com.mreblan.cvservice.models.Response;
 
 import com.mreblan.cvservice.services.CvService;
 import com.mreblan.cvservice.services.FileService;
@@ -35,6 +36,7 @@ import com.mreblan.cvservice.services.ZipService;
 import com.mreblan.cvservice.services.impl.TxtService;
 
 import com.mreblan.cvservice.exceptions.CvsNotFoundException;
+import com.mreblan.cvservice.exceptions.CvAlreadyExistsException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -99,7 +101,7 @@ public class CvController {
     // }
 
     @PostMapping("/saveCv")
-    public ResponseEntity<String> uploadCv(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Response> uploadCv(@RequestParam("file") MultipartFile file) {
         String text = null;
 
         try {
@@ -107,17 +109,23 @@ public class CvController {
             log.info("TEXT FROM FILE: {}", text);
         } catch (IOException e) {
             log.error(e.getMessage());
+
+            return createResponse(HttpStatus.INTERNAL_SERVER_ERROR, new Response(false, "Что-то пошло не так"));
         }
 
         if (text != null) {
-            cvService.saveCv(text);
+            try {
+                cvService.saveCv(text);
+            } catch (CvAlreadyExistsException e) {
+                log.error(e.getMessage());
 
-            return ResponseEntity.ok("CV Saved");
+                return createResponse(HttpStatus.BAD_REQUEST, new Response(false, "Данное резюме уже есть в базе"));
+            }
+
+            return createResponse(HttpStatus.OK, new Response(true, "Резюме получено"));
         }
 
-        return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Something went wrong");
+        return createResponse(HttpStatus.INTERNAL_SERVER_ERROR, new Response(false, "Что-то пошло не так"));
     }
     
     @GetMapping("/search")
@@ -166,4 +174,10 @@ public class CvController {
                     .headers(headers)
                     .body(data);
     } 
+
+    private ResponseEntity<Response> createResponse(HttpStatus status, Response response) {
+        return ResponseEntity
+                    .status(status)
+                    .body(response);
+    }
 } 
