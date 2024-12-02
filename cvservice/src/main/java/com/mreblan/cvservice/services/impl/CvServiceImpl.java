@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import com.mreblan.cvservice.models.CvModel;
 
 import com.mreblan.cvservice.repositories.CvRepository;
-
+import com.mreblan.cvservice.services.AiService;
 import com.mreblan.cvservice.services.CvService;
 
 import com.mreblan.cvservice.exceptions.CvsNotFoundException;
@@ -22,10 +22,12 @@ import lombok.RequiredArgsConstructor;
 public class CvServiceImpl implements CvService {
 
     private final CvRepository cvRepository;
+    private final AiService yandexGptService;
 
     @Autowired
-    public CvServiceImpl(CvRepository cvRepository) {
+    public CvServiceImpl(CvRepository cvRepository, AiService aiService) {
         this.cvRepository = cvRepository;
+        this.yandexGptService = aiService;
     }
     
     @Override
@@ -36,9 +38,9 @@ public class CvServiceImpl implements CvService {
             throw new CvAlreadyExistsException("This CV already in DB");
         }
 
-        CvModel cv = new CvModel(cvText);
+        CvModel fromAi = yandexGptService.sendMessage(cvText);
 
-        cvRepository.save(cv);
+        cvRepository.save(fromAi);
     }
 
     @Override

@@ -1,22 +1,13 @@
 package com.mreblan.cvservice.controllers;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.nio.file.Files;
 import java.util.List;
-import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.pdmodel.font.encoding.Encoding;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,7 +18,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.mreblan.cvservice.models.CvModel;
 import com.mreblan.cvservice.models.FindByKeywordsRequest;
-import com.mreblan.cvservice.models.CvResponse;
 import com.mreblan.cvservice.models.Response;
 
 import com.mreblan.cvservice.services.CvService;
@@ -43,8 +33,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
-import com.mreblan.cvservice.exceptions.CvsNotFoundException;
 import com.mreblan.cvservice.exceptions.CvAlreadyExistsException;
+import com.mreblan.cvservice.exceptions.JsonMappingFailedException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,37 +50,6 @@ public class CvController {
     private final FileService pdfService;
     private final TxtService txtService;
     private final CvService cvService;
-
-    // @PostMapping("/upload")
-    // public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file) {
-    //     if (
-    //         file.isEmpty() ||
-    //         !file.getOriginalFilename().endsWith(".pdf")
-    //     ) {
-    //         return ResponseEntity
-    //                     .status(HttpStatus.BAD_REQUEST)
-    //                     .body("Загрузите PDF файл");
-    //     }
-    //
-    //     try {
-    //         File uploadDir = new File(UPLOAD_DIR);
-    //         if (!uploadDir.exists()) {
-    //             uploadDir.mkdir();
-    //         }
-    //
-    //         File pdfFile = new File(uploadDir, file.getOriginalFilename());
-    //
-    //         try (FileOutputStream fos = new FileOutputStream(pdfFile)) {
-    //             fos.write(file.getBytes());
-    //         }
-    //
-    //         return ResponseEntity.ok("Файл загружен");
-    //     } catch (IOException e) {
-    //         return ResponseEntity
-    //                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
-    //                     .body("Ошибка загрузки файла");
-    //     }
-    // }
 
 
     @Operation(summary = "Сохранение резюме",
@@ -154,8 +113,11 @@ public class CvController {
                 log.error(e.getMessage());
 
                 return createResponse(HttpStatus.BAD_REQUEST, new Response(false, "Данное резюме уже есть в базе"));
-            }
+            } catch (JsonMappingFailedException e) {
+                log.error(e.getMessage());
 
+                return createResponse(HttpStatus.INTERNAL_SERVER_ERROR, new Response(false, "Что-то пошло не так"));
+            }
             return createResponse(HttpStatus.OK, new Response(true, "Резюме получено"));
         }
 
@@ -209,12 +171,11 @@ public class CvController {
         return createCvResponse(HttpStatus.OK, bOutputStream.toByteArray());
     }
 
-    @Deprecated
     @GetMapping()
-    public ResponseEntity<String> getAllCv() {
+    public ResponseEntity<String> getAll() {
         cvService.getAllCv();
 
-        return ResponseEntity.ok("All CVs getted");
+        return ResponseEntity.ok("Ok");
     }
 
     private ResponseEntity<byte[]> createCvResponse(HttpStatus status, byte[] data) {
