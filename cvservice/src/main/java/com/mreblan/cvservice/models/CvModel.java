@@ -23,4 +23,6 @@ public class CvModel {
     public CvModel(String cvText) {
         this.cvText = cvText;
     }
+
+    public CvModel() {}
 }

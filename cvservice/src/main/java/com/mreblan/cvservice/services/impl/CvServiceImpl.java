@@ -7,7 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.mreblan.cvservice.models.CvModel;
-
+import com.mreblan.cvservice.models.FindByKeywordsRequest;
+import com.mreblan.cvservice.repositories.CustomCvRepository;
 import com.mreblan.cvservice.repositories.CvRepository;
 import com.mreblan.cvservice.services.AiService;
 import com.mreblan.cvservice.services.CvService;
@@ -21,13 +22,15 @@ import lombok.RequiredArgsConstructor;
 @Service
 public class CvServiceImpl implements CvService {
 
+    private final CustomCvRepository customCvRepository;
     private final CvRepository cvRepository;
     private final AiService yandexGptService;
 
     @Autowired
-    public CvServiceImpl(CvRepository cvRepository, AiService aiService) {
+    public CvServiceImpl(CvRepository cvRepository, AiService aiService, CustomCvRepository customCvRepository) {
         this.cvRepository = cvRepository;
         this.yandexGptService = aiService;
+        this.customCvRepository = customCvRepository;
     }
     
     @Override
@@ -52,9 +55,21 @@ public class CvServiceImpl implements CvService {
     }
 
     @Override
-    public List<CvModel> getCvByKeyword(List<String> keywordsList) {
-        String keywords = String.join(" ", keywordsList);
-        List<CvModel> result = cvRepository.searchByKeyword(keywords);
+    public List<CvModel> getCvByKeywordsStrict(FindByKeywordsRequest request) {
+        List<CvModel> result = customCvRepository.searchByKeywordsStrict(request);
+
+        // result.forEach(cv -> System.out.println(cv.toString()));
+
+        if (result == null) {
+            throw new CvsNotFoundException("Cvs with such keywords not found");
+        }
+
+        return result;
+    }
+
+    @Override
+    public List<CvModel> getCvByKeywordsWeak(FindByKeywordsRequest request) {
+        List<CvModel> result = customCvRepository.searchByKeywordsWeak(request);
 
         // result.forEach(cv -> System.out.println(cv.toString()));
 

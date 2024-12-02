@@ -125,7 +125,7 @@ public class CvController {
     }
     
     @Operation(summary = "Ищет резюме по ключевым словам",
-        description = "Ищет резюме, в которых присутствуют ключевые слова, указанные в запросе. Возвращает zip-архив"
+        description = "Ищет резюме, в которых присутствуют все ключевые слова, указанные в запросе. Возвращает zip-архив"
     )
     @ApiResponses(
         value = {
@@ -143,9 +143,59 @@ public class CvController {
             )
         }
     )
-    @GetMapping("/search")
-    public ResponseEntity<byte[]> searchByKeywords(@RequestBody FindByKeywordsRequest request) {
-        List<CvModel> cvs = cvService.getCvByKeyword(request.getKeywords());
+    @GetMapping("/search/strict")
+    public ResponseEntity<byte[]> searchByKeywordsStrict(@RequestBody FindByKeywordsRequest request) {
+        List<CvModel> cvs = cvService.getCvByKeywordsStrict(request);
+        cvs.forEach(cv -> log.info("RESUMES STRICT: {}", cv.toString()));
+        ByteArrayOutputStream bOutputStream = null;
+        ZipOutputStream zOutputStream = null;
+
+        try {
+            bOutputStream = new ByteArrayOutputStream();
+            zOutputStream = zipService.generateZipOutputStream(bOutputStream);
+        
+            int counter = 1;
+            for (CvModel cv : cvs) {
+                byte[] file = txtService.generateFile(cv); 
+
+                zipService.appendZip(zOutputStream, file, "resume%d".formatted(counter));
+                counter++;
+            }
+
+            zOutputStream.close();
+        } catch (IOException e) {
+            log.error(e.getMessage());
+
+            return createCvResponse(HttpStatus.INTERNAL_SERVER_ERROR, null);
+        } 
+
+        return createCvResponse(HttpStatus.OK, bOutputStream.toByteArray());
+    }
+
+
+    @Operation(summary = "Ищет резюме по ключевым словам",
+        description = "Ищет резюме, в которых присутствует хотя бы одно ключевое слово, указанные в запросе. Возвращает zip-архив"
+    )
+    @ApiResponses(
+        value = {
+            @ApiResponse(responseCode = "200",
+            description = "Резюме найдены",
+            content = @Content(
+                    mediaType = "application/zip",
+                    schema = @Schema(
+                        type = "string", format = "binary"
+                    )
+                )
+            ),
+            @ApiResponse(responseCode = "500",
+            description = "При формировании архива что-то пошло не так"
+            )
+        }
+    )
+    @GetMapping("/search/weak")
+    public ResponseEntity<byte[]> searchByKeywordsWeak(@RequestBody FindByKeywordsRequest request) {
+        List<CvModel> cvs = cvService.getCvByKeywordsStrict(request);
+        cvs.forEach(cv -> log.info("RESUMES STRICT: {}", cv.toString()));
         ByteArrayOutputStream bOutputStream = null;
         ZipOutputStream zOutputStream = null;
 

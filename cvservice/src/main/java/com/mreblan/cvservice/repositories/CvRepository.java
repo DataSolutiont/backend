@@ -14,4 +14,6 @@ public interface CvRepository extends ElasticsearchRepository<CvModel, String> {
     // @Query("{\"match\": {\"fullText\": \"%?0%\"}}")
     List<CvModel> searchByKeyword(String keyword);
     CvModel findByCvText(String cvText);
+
+    // List<CvModel> searchByKeywords() 
 }
