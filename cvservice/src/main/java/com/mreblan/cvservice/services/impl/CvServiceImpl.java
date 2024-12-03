@@ -60,7 +60,7 @@ public class CvServiceImpl implements CvService {
 
         // result.forEach(cv -> System.out.println(cv.toString()));
 
-        if (result == null) {
+        if (result == null || result.isEmpty()) {
             throw new CvsNotFoundException("Cvs with such keywords not found");
         }
 

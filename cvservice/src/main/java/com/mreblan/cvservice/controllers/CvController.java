@@ -25,6 +25,7 @@ import com.mreblan.cvservice.services.FileService;
 import com.mreblan.cvservice.services.ZipService;
 import com.mreblan.cvservice.services.impl.TxtService;
 
+import co.elastic.clients.elasticsearch.nodes.Http;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.info.Info;
@@ -34,6 +35,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 import com.mreblan.cvservice.exceptions.CvAlreadyExistsException;
+import com.mreblan.cvservice.exceptions.CvsNotFoundException;
 import com.mreblan.cvservice.exceptions.JsonMappingFailedException;
 
 import lombok.RequiredArgsConstructor;
@@ -124,7 +126,7 @@ public class CvController {
         return createResponse(HttpStatus.INTERNAL_SERVER_ERROR, new Response(false, "Что-то пошло не так"));
     }
     
-    @Operation(summary = "Ищет резюме по ключевым словам",
+    @Operation(summary = "Ищет резюме по ключевым словам (строго)",
         description = "Ищет резюме, в которых присутствуют все ключевые слова, указанные в запросе. Возвращает zip-архив"
     )
     @ApiResponses(
@@ -144,8 +146,32 @@ public class CvController {
         }
     )
     @GetMapping("/search/strict")
-    public ResponseEntity<byte[]> searchByKeywordsStrict(@RequestBody FindByKeywordsRequest request) {
-        List<CvModel> cvs = cvService.getCvByKeywordsStrict(request);
+    public ResponseEntity<?> searchByKeywordsStrict(@RequestBody FindByKeywordsRequest request) {
+
+        log.info("REQUEST STRICT: {}", request.toString());
+        if (
+            request.getKwSkills()     == null &&
+            request.getKwCompanies()  == null &&
+            request.getKwWorkFormat() == null &&
+            request.getKwYearsOfExp() == 0
+        ) {
+            return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body("Резюме не найдены");
+        }
+
+        List<CvModel> cvs;
+
+        try {
+            cvs = cvService.getCvByKeywordsStrict(request);
+        } catch (CvsNotFoundException e) {
+            log.error(e.getMessage());
+
+            return ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .body("Резюме не найдены");
+        }
+
         cvs.forEach(cv -> log.info("RESUMES STRICT: {}", cv.toString()));
         ByteArrayOutputStream bOutputStream = null;
         ZipOutputStream zOutputStream = null;
@@ -162,18 +188,36 @@ public class CvController {
                 counter++;
             }
 
-            zOutputStream.close();
+            zOutputStream.close(); 
+
+            if (bOutputStream.toByteArray().length == 0) {
+                log.warn("Zip is empty");
+
+                return ResponseEntity
+                            .status(HttpStatus.NOT_FOUND)
+                            .body("Резюме не найдены");
+            }
         } catch (IOException e) {
             log.error(e.getMessage());
 
-            return createCvResponse(HttpStatus.INTERNAL_SERVER_ERROR, null);
-        } 
+            // return createCvResponse(HttpStatus.INTERNAL_SERVER_ERROR, null);
+            return ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Что-то пошло не так");
+        } catch (CvsNotFoundException e) {
+            log.error(e.getMessage());
+
+            // return createCvResponse(HttpStatus.NOT_FOUND, null);
+            return ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .body("Резюме не найдены");
+        }
 
         return createCvResponse(HttpStatus.OK, bOutputStream.toByteArray());
     }
 
 
-    @Operation(summary = "Ищет резюме по ключевым словам",
+    @Operation(summary = "Ищет резюме по ключевым словам (не строго)",
         description = "Ищет резюме, в которых присутствует хотя бы одно ключевое слово, указанные в запросе. Возвращает zip-архив"
     )
     @ApiResponses(
@@ -192,10 +236,33 @@ public class CvController {
             )
         }
     )
+    @Deprecated
     @GetMapping("/search/weak")
-    public ResponseEntity<byte[]> searchByKeywordsWeak(@RequestBody FindByKeywordsRequest request) {
-        List<CvModel> cvs = cvService.getCvByKeywordsStrict(request);
-        cvs.forEach(cv -> log.info("RESUMES STRICT: {}", cv.toString()));
+    public ResponseEntity<?> searchByKeywordsWeak(@RequestBody FindByKeywordsRequest request) {
+        log.info("REQUEST WEAK: {}", request.toString());
+        if (
+            request.getKwSkills()     == null &&
+            request.getKwCompanies()  == null &&
+            request.getKwWorkFormat() == null &&
+            request.getKwYearsOfExp() == 0
+        ) {
+            return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body("Получен пустой запрос");
+        }
+        
+        List<CvModel> cvs;
+
+        try {
+            cvs = cvService.getCvByKeywordsWeak(request);
+        } catch (CvsNotFoundException e) {
+            log.error(e.getMessage());
+
+            return ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .body("Резюме не найдены");
+        }
+        // cvs.forEach(cv -> log.info("RESUMES WEAK: {}", cv.toString()));
         ByteArrayOutputStream bOutputStream = null;
         ZipOutputStream zOutputStream = null;
 
@@ -212,11 +279,22 @@ public class CvController {
             }
 
             zOutputStream.close();
+
+            if (bOutputStream.toByteArray().length == 0) {
+                log.warn("Zip is empty");
+
+                return ResponseEntity
+                            .status(HttpStatus.NOT_FOUND)
+                            .body("Резюме не найдены");
+            }
         } catch (IOException e) {
             log.error(e.getMessage());
 
-            return createCvResponse(HttpStatus.INTERNAL_SERVER_ERROR, null);
-        } 
+            // return createCvResponse(HttpStatus.INTERNAL_SERVER_ERROR, null);
+            return ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Что-то пошло не так");
+        }
 
         return createCvResponse(HttpStatus.OK, bOutputStream.toByteArray());
     }
