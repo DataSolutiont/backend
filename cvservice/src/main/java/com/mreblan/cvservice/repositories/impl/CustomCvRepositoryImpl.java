@@ -1,7 +1,6 @@
 package com.mreblan.cvservice.repositories.impl;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,12 +24,10 @@ public class CustomCvRepositoryImpl implements CustomCvRepository {
     public List<CvModel> searchByKeywordsStrict(FindByKeywordsRequest request) {
         List<CvModel> result = new ArrayList<>();
 
-        // Criteria criteria = new Criteria();
 
         StringBuilder strQuery = new StringBuilder("{\"bool\": {\"must\": ["); 
 
         if (request.getKwSkills() != null && !request.getKwSkills().isEmpty()) {
-            // criteria.and("skills").is(request.getKwSkills());
 
             for (String skill : request.getKwSkills()) {
                 strQuery.append("{\"match\": {\"skills\": \"" + skill + "\"}},");
@@ -38,19 +35,16 @@ public class CustomCvRepositoryImpl implements CustomCvRepository {
         }
 
         if (request.getKwYearsOfExp() > 0) {
-            // criteria.and("expYears").greaterThan(request.getKwYearsOfExp());
             strQuery.append("{\"range\": {\"expYears\": {\"gte\": " + request.getKwYearsOfExp() + "}}},");
         }
         
         if (request.getKwCompanies() != null && !request.getKwCompanies().isEmpty()) {
-            // criteria.and("companies").is(request.getKwCompanies());
             for (String company : request.getKwCompanies()) {
                 strQuery.append("{\"match\": {\"companies\": \"" + company + "\"}},");
             }
         }
 
         if (request.getKwWorkFormat() != null && !request.getKwWorkFormat().isEmpty()) {
-            // criteria.and("workFormat").is(request.getKwWorkFormat());
             strQuery.append("{\"match\": {\"workFormat\": \"" + request.getKwWorkFormat() + "\"}},");
         }
 
@@ -60,7 +54,6 @@ public class CustomCvRepositoryImpl implements CustomCvRepository {
 
         strQuery.append("]}}");
 
-        // Query query = new CriteriaQuery(criteria);
         StringQuery stringQuery = new StringQuery(strQuery.toString());
 
         log.info("QUERY: {}", strQuery.toString());
@@ -89,15 +82,9 @@ public class CustomCvRepositoryImpl implements CustomCvRepository {
     public List<CvModel> searchByKeywordsWeak(FindByKeywordsRequest request) {
         List<CvModel> result = new ArrayList<>();
 
-        // Criteria criteria = new Criteria();
         StringBuilder strQuery = new StringBuilder("{\"bool\": {\"should\": ["); 
 
         if (request.getKwSkills() != null && !request.getKwSkills().isEmpty()) {
-            // criteria.or("skills").is(request.getKwSkills());
-            // String skillsStr = "[" + String.join(",", Arrays.stream(request.getKwSkills())
-            //                                             .map(skill -> "\"" + skill + "\"")
-            //                                             .toArray(String[]::new)
-            // ) + "]";
             
             strQuery.append("{\"terms\": {\"skills\": [");
 
@@ -112,12 +99,10 @@ public class CustomCvRepositoryImpl implements CustomCvRepository {
         }
 
         if (request.getKwYearsOfExp() > 0) {
-            // criteria.or("expYears").greaterThan(request.getKwYearsOfExp());
             strQuery.append("{\"range\": {\"expYears\": {\"gte\": " + request.getKwYearsOfExp() + "}}},");
         }
         
         if (request.getKwCompanies() != null && !request.getKwCompanies().isEmpty()) {
-            // criteria.or("companies").is(request.getKwCompanies());
             strQuery.append("{\"terms\": {\"companies\": [");
 
             for (int i = 0; i < request.getKwCompanies().size(); i++) {
@@ -131,7 +116,6 @@ public class CustomCvRepositoryImpl implements CustomCvRepository {
         }
 
         if (request.getKwWorkFormat() != null && !request.getKwWorkFormat().isEmpty()) {
-            // criteria.or("workFormat").is(request.getKwWorkFormat());
             strQuery.append("{\"match\": {\"workFormat\": \"" + request.getKwWorkFormat() + "\"}},");
         }
 
@@ -139,7 +123,6 @@ public class CustomCvRepositoryImpl implements CustomCvRepository {
             strQuery.setLength(strQuery.length() - 1);
         }
 
-        // Query query = new CriteriaQuery(criteria);
         StringQuery query = new StringQuery(strQuery.toString());
 
         try {
