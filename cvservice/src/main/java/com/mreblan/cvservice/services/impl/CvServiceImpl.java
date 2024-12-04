@@ -56,6 +56,7 @@ public class CvServiceImpl implements CvService {
 
         yandexGptService.sendMessageAsync(cvText)
             .subscribe(response -> {
+                log.info("YANDEXGPT RESPONSE: {}", response.toString())
                 String json = response.getResult().getAlternatives().get(0).getMessage().getText();
                 CvModel cv = yandexGptService.jsonToCvModel(json, cvText);
 

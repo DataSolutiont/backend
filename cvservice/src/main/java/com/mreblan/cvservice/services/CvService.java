@@ -10,6 +10,7 @@ import reactor.core.publisher.Mono;
 public interface CvService {
     void saveCv(String cvText);
     void saveCvAsync(String cvText);
+    // Mono<Void> saveCvAsync(String cvText);
     void getAllCv();
     List<CvModel> getCvByKeywordsStrict(FindByKeywordsRequest request);
     List<CvModel> getCvByKeywordsWeak(FindByKeywordsRequest request);

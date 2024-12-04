@@ -28,11 +28,13 @@ public class YandexGptRequestFactoryImpl implements YandexGptRequestFactory {
         StringBuilder rules = new StringBuilder();
 
         rules.append("Проанализируй текст резюме и выдели следующие поля оттуда:\n");
-        rules.append("навыки кандидата, сколько лет опыта работы, компании, в которых он работал, предпочитаемый формат работы.\n");
+        rules.append("навыки кандидата, опыт работы (сколько лет), компании, в которых он работал, предпочитаемый формат работы.\n");
         rules.append("Если формат работы полный (или полный рабочий день), то указывай \"полная занятость\". \n");
         rules.append("Предоставь ответ в JSON формате, не используя никакие разметки и специальные символы.\n");
         rules.append("JSON должен быть следующего вида:\n");
         rules.append("{\n \"skills: [\"skills\"], \"expYears\": int, \"companies\": [\"companies\"], \"workFormat\": \"string\" }");
+        rules.append("\nЗдесь skills - массив строк, который представляет навыки кандидата, expYears - число, представляющее опыт работы (количество лет), ");
+        rules.append("companies - массив строк, представляющий название компаний, в которых работал кандидат, workFormat - строка, представляющая предпочитаемый формат работы");
 
         msgs.add(new YandexGptMessage("system", rules.toString()));
         msgs.add(new YandexGptMessage("user", cvText));

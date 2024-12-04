@@ -70,6 +70,8 @@ public class YandexGptService implements AiService {
     public Mono<YandexGptResponse> sendMessageAsync(String cvText) {
         YandexGptRequest request = requestFactory.createRequest(cvText);
 
+        log.info("REQUEST TO YANDEX GPT: {}", request.toString());
+
         Mono<YandexGptResponse> monoResponse = webclient.post().header("Authorization", "Api-key %s".formatted(properties.API_KEY))
                                                     .header("x-folder-id", properties.FOLDER_ID)
                                                     .contentType(MediaType.APPLICATION_JSON)
