@@ -14,6 +14,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mreblan.cvservice.config.YandexGptProperties;
+import com.mreblan.cvservice.exceptions.AiRequestFailedException;
 import com.mreblan.cvservice.exceptions.JsonMappingFailedException;
 import com.mreblan.cvservice.factories.YandexGptRequestFactory;
 import com.mreblan.cvservice.models.CvModel;
@@ -38,7 +39,7 @@ public class YandexGptService implements AiService {
     private final ObjectMapper objectMapper;
 
     @Override
-    public CvModel sendMessage(String cvText) {
+    public CvModel sendMessageSync(String cvText) {
         YandexGptRequest request = requestFactory.createRequest(cvText);
 
         // ResponseEntity<YandexGptResponse> responseEntity = restClient.post().header("Authorization", String.format("Api-key %s", properties.API_KEY))
@@ -62,10 +63,30 @@ public class YandexGptService implements AiService {
 
         YandexGptResponse.Result.Alternative.Message message = response.getResult().getAlternatives().get(0).getMessage();
 
-        return JsonToCvModel(message.getText(), cvText);
+        return jsonToCvModel(message.getText(), cvText);
     }
 
-    private CvModel JsonToCvModel(String json, String cvText) {
+    @Override
+    public Mono<YandexGptResponse> sendMessageAsync(String cvText) {
+        YandexGptRequest request = requestFactory.createRequest(cvText);
+
+        Mono<YandexGptResponse> monoResponse = webclient.post().header("Authorization", "Api-key %s".formatted(properties.API_KEY))
+                                                    .header("x-folder-id", properties.FOLDER_ID)
+                                                    .contentType(MediaType.APPLICATION_JSON)
+                                                    .bodyValue(request)
+                                                    .retrieve()
+                                                    .bodyToMono(YandexGptResponse.class)
+                                                    .doOnError(error -> {
+            log.error("AN ERROR ACQUIRED: {}", error);
+            throw new AiRequestFailedException("Failed to reach the AI");
+        });
+
+        return monoResponse;
+    }
+
+    @Override
+    public CvModel jsonToCvModel(String json, String cvText) {
+        json = json.replace("`", "");
         CvModel model = new CvModel(cvText);
         try {
             Map<String, Object> fields = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});

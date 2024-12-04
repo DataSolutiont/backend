@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.mreblan.cvservice.models.CvModel;
 import com.mreblan.cvservice.models.FindByKeywordsRequest;
+import com.mreblan.cvservice.models.yandexgpt.response.YandexGptResponse;
 import com.mreblan.cvservice.repositories.CustomCvRepository;
 import com.mreblan.cvservice.repositories.CvRepository;
 import com.mreblan.cvservice.services.AiService;
@@ -17,7 +18,10 @@ import com.mreblan.cvservice.exceptions.CvsNotFoundException;
 import com.mreblan.cvservice.exceptions.CvAlreadyExistsException;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
+@Slf4j
 // @RequiredArgsConstructor
 @Service
 public class CvServiceImpl implements CvService {
@@ -35,15 +39,30 @@ public class CvServiceImpl implements CvService {
     
     @Override
     public void saveCv(String cvText) {
-        CvModel existingCv = cvRepository.findByCvText(cvText);
-
-        if (existingCv != null) {
-            throw new CvAlreadyExistsException("This CV already in DB");
+        if (isCvExists(cvText)) {
+            throw new CvAlreadyExistsException("Cv already in DB");
         }
 
-        CvModel fromAi = yandexGptService.sendMessage(cvText);
+        CvModel fromAi = yandexGptService.sendMessageSync(cvText);
 
         cvRepository.save(fromAi);
+    }
+
+    @Override
+    public void saveCvAsync(String cvText) {
+        if (isCvExists(cvText)) {
+            Mono.error(new CvAlreadyExistsException("Cv already in DB"));
+        }
+
+        yandexGptService.sendMessageAsync(cvText)
+            .subscribe(response -> {
+                String json = response.getResult().getAlternatives().get(0).getMessage().getText();
+                CvModel cv = yandexGptService.jsonToCvModel(json, cvText);
+
+                cvRepository.save(cv);
+            }, error -> {
+                    log.error("ERROR WITH RESPONSE HANDLING: {}", error.getMessage());
+                });
     }
 
     @Override
@@ -78,5 +97,9 @@ public class CvServiceImpl implements CvService {
         }
 
         return result;
+    }
+
+    private boolean isCvExists(String cvText) {
+        return (cvRepository.findByCvText(cvText) != null);
     }
 }

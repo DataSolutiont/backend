@@ -125,6 +125,45 @@ public class CvController {
 
         return createResponse(HttpStatus.INTERNAL_SERVER_ERROR, new Response(false, "Что-то пошло не так"));
     }
+
+    @PostMapping("/saveCv/async")
+    public ResponseEntity<?> uploadCvAsync(@RequestParam("file") MultipartFile file) {
+
+        String text = null;
+
+        if (
+            file.isEmpty() || 
+            !file.getOriginalFilename().endsWith(".pdf")
+        ) {
+            return createResponse(HttpStatus.BAD_REQUEST, new Response(false, "Файл не загружен или не является файлом формата pdf"));
+        }
+
+        try {
+            text = pdfService.extractText(file);
+            log.info("TEXT FROM FILE: {}", text);
+        } catch (IOException e) {
+            log.error(e.getMessage());
+
+            return createResponse(HttpStatus.INTERNAL_SERVER_ERROR, new Response(false, "Что-то пошло не так"));
+        }
+
+        if (text != null) {
+            try {
+                cvService.saveCvAsync(text);
+            } catch (CvAlreadyExistsException e) {
+                log.error(e.getMessage());
+
+                return createResponse(HttpStatus.BAD_REQUEST, new Response(false, "Данное резюме уже есть в базе"));
+            } catch (JsonMappingFailedException e) {
+                log.error(e.getMessage());
+
+                return createResponse(HttpStatus.INTERNAL_SERVER_ERROR, new Response(false, "Что-то пошло не так"));
+            }
+            return createResponse(HttpStatus.OK, new Response(true, "Резюме получено"));
+        }
+
+        return createResponse(HttpStatus.INTERNAL_SERVER_ERROR, new Response(false, "Что-то пошло не так"));
+    }
     
     @Operation(summary = "Ищет резюме по ключевым словам (строго)",
         description = "Ищет резюме, в которых присутствуют все ключевые слова, указанные в запросе. Возвращает zip-архив"
